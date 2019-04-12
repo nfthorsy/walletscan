@@ -17,16 +17,47 @@ class CTTransferType(Enum):
 
 class CoinTrackingExporter(object):
 
-    def __init__(self, wallet_address, wallet_name):
+    def __init__(self, wallet_address, wallet_name = None):
         self.wallet_address = wallet_address
         self.wallet_name = wallet_name
         self.assignments = []
+        self.groups = []
 
     def add_assign(self, transfer_type : CTTransferType, from_address = None, to_address = None):
+        """
+        Adds transfer assignments. Transfers are assigned to specific transfer types based on the assignment. 
+        Without assignment, transfers will be declared as deposits or withdrawals.
+        
+        Arguments:
+            transfer_type {CTTransferType} -- Type which will be assigned to the transfers.
+        
+        Keyword Arguments:
+            from_address {str} -- Affected transfers with this sender address. (default: {None})
+            to_address {str} -- Affected transfers with this destination address. (default: {None})
+        """
+
+        if from_address is None and to_address is None:
+            print('Either sender address or destination address must be set.')
+            return
+
         assignment = {'transfer_type' : transfer_type, 'from_address' : from_address, 'to_address' : to_address}
         self.assignments.append(assignment)
 
-    def export_csv(self, filename):
+    def add_group(self, from_address = None, to_address = None):
+        """Adds transfers from specific senders or receivers to a group. Grouped transfers are merged into one transfer when exported.
+        
+        Keyword Arguments:
+            from_address {str} -- Affected transfers with this sender address. (default: {None})
+            to_address {[type]} -- Affected transfers with this destination address. (default: {None})
+        """
+        pass
+
+    def export_csv(self, filename: str):
+        """Fetches the transfers from the wallet and exports them to a csv file.
+        
+        Arguments:
+            filename {str} -- Destination file.
+        """
 
         print("Fetching transfers from tronscan.org API ...")
         scanner = tronscanner.TronScan(self.wallet_address)
@@ -101,7 +132,7 @@ class CoinTrackingExporter(object):
                 line += r'"","",'
 
                 # Exchange
-                line += '\"' + self.wallet_name + '\",'
+                line += '\"' + '' if self.wallet_name is None else self.wallet_name + '\",'
 
                 # Group
                 line += r'"",'
