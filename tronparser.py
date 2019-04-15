@@ -18,19 +18,31 @@ class ContractType(Enum):
         Unfreeze = 12
 
 class TronTransfer(object):
-    def __init__(self, transfer_dict):
-        self.id = transfer_dict['id']
-        self.block = int(transfer_dict['block'])
-        self.transactionHash = transfer_dict['transactionHash']
-        self.timestamp = int(transfer_dict['timestamp'])
-        self.transferFromAddress = transfer_dict['transferFromAddress']
-        self.transferToAddress = transfer_dict['transferToAddress']
-        self.amount = int(transfer_dict['amount'])
-        self.tokenName = transfer_dict['tokenName']
-        self.confirmed = transfer_dict['confirmed']
-        if not self.confirmed:
-            print(self.id)
-        self.data = transfer_dict['data']
+    def __init__(self, transfer_dict = None):
+        if transfer_dict is None:
+            self.id = None
+            self.block = None
+            self.transactionHash = None
+            self.timestamp = None
+            self.transferFromAddress = None
+            self.transferToAddress = None
+            self.amount = None
+            self.tokenName = None
+            self.confirmed = None
+            self.data = None
+        else:
+            self.id = transfer_dict['id']
+            self.block = int(transfer_dict['block'])
+            self.transactionHash = transfer_dict['transactionHash']
+            self.timestamp = int(transfer_dict['timestamp'])
+            self.transferFromAddress = transfer_dict['transferFromAddress']
+            self.transferToAddress = transfer_dict['transferToAddress']
+            self.amount = int(transfer_dict['amount'])
+            self.tokenName = str(transfer_dict['tokenName'])
+            self.confirmed = transfer_dict['confirmed']
+            if not self.confirmed:
+                print("Warning: Transfer " + self.id + " is not confirmed!")
+            self.data = transfer_dict['data']
 
     def get_date(self, timezone = 'Europe/Berlin', date_format = '%Y-%m-%d %H:%M:%S'):
         ts = self.timestamp / 1000

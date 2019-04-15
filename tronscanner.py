@@ -55,9 +55,9 @@ class TronScan(object):
             progress = ((i + 1) / (max_index + 1)) * 100
             sys.stdout.write("\r%d%%" % progress)
 
-        dataLen = len(data['data'])
-        data['total'] = dataLen
-        print('\n' + str(dataLen) + ' transfers received.')
+        data_len = len(data['data'])
+        data['total'] = data_len
+        print('\n' + str(data_len) + ' transfers received.')
         return data
 
     def get_all_transactions(self):
@@ -79,9 +79,9 @@ class TronScan(object):
             progress = ((i + 1) / (max_index + 1)) * 100
             sys.stdout.write("\r%d%%" % progress)
 
-        dataLen = len(data['data'])
-        data['total'] = dataLen
-        print('\n' + str(dataLen) + ' transcations received.')
+        data_len = len(data['data'])
+        data['total'] = data_len
+        print('\n' + str(data_len) + ' transcations received.')
         return data
 
             
