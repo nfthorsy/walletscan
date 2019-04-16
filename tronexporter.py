@@ -21,7 +21,7 @@ class CoinTrackingExporter(object):
         self.wallet_address = wallet_address
         self.wallet_name = wallet_name
         self.assignments = []
-        self.groups = []
+        self.group_filters = []
 
     def add_assign(self, transfer_type : CTTransferType, from_address = None, to_address = None):
         """
@@ -42,7 +42,7 @@ class CoinTrackingExporter(object):
 
         self.assignments.append({'transfer_type' : transfer_type, 'from_address' : from_address, 'to_address' : to_address})
 
-    def add_group(self, currency : str, from_address = None, to_address = None):
+    def add_group_filter(self, currency : str, from_address = None, to_address = None):
         """
         Adds transfers from specific senders or receivers to a group. Grouped transfers are merged into one transfer when exported.
         
@@ -56,10 +56,10 @@ class CoinTrackingExporter(object):
             print('Either sender address or destination address must be set.')
             return
 
-        self.groups.append({'currency' : currency, 'from_address' : from_address, 'to_address' : to_address})
+        self.group_filters.append({'currency' : currency, 'from_address' : from_address, 'to_address' : to_address})
 
     def _group_transfers(self, transfers : [tronparser.TronTransfer]):
-        if not self.groups:
+        if not self.group_filters:
             return {}, transfers
 
         sorted_tr = sorted(transfers, key = lambda x: x.timestamp)
@@ -67,56 +67,91 @@ class CoinTrackingExporter(object):
         grouped_tr = {}
         ungrouped_tr = []
         new_group_currenys = []
-        for g in self.groups:
-            for t in sorted_tr:
-                if g['currency'] == t.tokenName:
-                             
-                    # deposit
-                    if g['from_address'] is not None and g['from_address'] == t.transferFromAddress:
-                        if t.tokenName not in grouped_tr:
-                            grouped_tr[t.tokenName] = {'count' : 0, 'groups' : []}
+        for t in sorted_tr:
+            for g_filter in self.group_filters:
+                is_grouped = False    
 
-                        if grouped_tr[t.tokenName]['count'] == 0:
-                            grouped_tr[t.tokenName]['groups'].append({'is_outgoing' : False, 'transfers' : []})
-                            grouped_tr[t.tokenName]['count'] = 1
+                # deposit
+                if g_filter['from_address'] is not None and g_filter['from_address'] == t.transferFromAddress:
+                    # Add token as a new category, if the category doesn't exist yet
+                    if t.tokenName not in grouped_tr:
+                        grouped_tr[t.tokenName] = {'count' : 0, 'groups' : []}
 
+                    # Add new Group, if the token has nos group yet
+                    if grouped_tr[t.tokenName]['count'] == 0:
+                        grouped_tr[t.tokenName]['groups'].append({'is_outgoing' : False, 
+                                                                  'address': t.transferFromAddress, 
+                                                                  'transfers' : []})
+                        grouped_tr[t.tokenName]['count'] = 1
+
+                    # Current group index
+                    group_index = grouped_tr[t.tokenName]['count'] - 1
+
+                    # If the current transfer does not fit into the group, new group will be created
+                    if grouped_tr[t.tokenName]['groups'][group_index]['is_outgoing'] or \
+                       grouped_tr[t.tokenName]['groups'][group_index]['address'] != t.transferFromAddress or \
+                       t.tokenName in new_group_currenys:
+                        
+                        # Add new group
+                        grouped_tr[t.tokenName]['groups'].append({'is_outgoing' : False, 
+                                                                  'address': t.transferFromAddress,
+                                                                  'transfers' : []})
+                        
+                        grouped_tr[t.tokenName]['count'] += 1 
                         group_index = grouped_tr[t.tokenName]['count'] - 1
-                        if grouped_tr[t.tokenName]['groups'][group_index]['is_outgoing'] or t.tokenName in new_group_currenys:
-                            grouped_tr[t.tokenName]['groups'].append({'is_outgoing' : False, 'transfers' : []})
-                            grouped_tr[t.tokenName]['count'] += 1 
-                            group_index = grouped_tr[t.tokenName]['count'] - 1
-                            if t.tokenName in new_group_currenys: new_group_currenys.remove(t.tokenName)
+                        if t.tokenName in new_group_currenys: new_group_currenys.remove(t.tokenName)
+                    
+                    # Add transfer to group
+                    grouped_tr[t.tokenName]['groups'][group_index]['transfers'].append(t)
+                    is_grouped = True
+                    break
 
-                        grouped_tr[t.tokenName]['groups'][group_index]['transfers'].append(t)
+                # withdrawal
+                elif g_filter['to_address'] is not None and g_filter['to_address'] == t.transferToAddress:
+                     # Add token as a new category, if the category doesn't exist yet
+                    if t.tokenName not in grouped_tr:
+                        grouped_tr[t.tokenName] = {'count' : 0, 'groups' : []}
 
-                    # withdrawal
-                    elif g['to_address'] is not None and g['to_address'] == t.transferToAddress:
-                        if t.tokenName not in grouped_tr:
-                            grouped_tr[t.tokenName] = {'count' : 0, 'groups' : []}
+                    # Add new Group, if the token has nos group yet
+                    if grouped_tr[t.tokenName]['count'] == 0:
+                        grouped_tr[t.tokenName]['groups'].append({'is_outgoing' : True, 
+                                                                  'address': t.transferToAddress,
+                                                                  'transfers' : []})
+                        grouped_tr[t.tokenName]['count'] = 1
 
-                        if grouped_tr[t.tokenName]['count'] == 0:
-                            grouped_tr[t.tokenName]['groups'].append({'is_outgoing' : True, 'transfers' : []})
-                            grouped_tr[t.tokenName]['count'] = 1
+                    # Current group index
+                    group_index = grouped_tr[t.tokenName]['count'] - 1
 
+                    # If the current transfer does not fit into the group, new group will be created
+                    if grouped_tr[t.tokenName]['groups'][group_index]['is_outgoing'] or \
+                       grouped_tr[t.tokenName]['groups'][group_index]['address'] != t.transferToAddress or \
+                       t.tokenName in new_group_currenys:
+
+                        # Add new group
+                        grouped_tr[t.tokenName]['groups'].append({'is_outgoing' : True, 
+                                                                  'address': t.transferToAddress,
+                                                                  'transfers' : []})
+
+                        grouped_tr[t.tokenName]['count'] += 1 
                         group_index = grouped_tr[t.tokenName]['count'] - 1
-                        if grouped_tr[t.tokenName]['groups'][group_index]['is_outgoing'] or t.tokenName in new_group_currenys:
-                            grouped_tr[t.tokenName]['groups'].append({'is_outgoing' : True, 'transfers' : []})
-                            grouped_tr[t.tokenName]['count'] += 1 
-                            group_index = grouped_tr[t.tokenName]['count'] - 1
-                            if t.tokenName in new_group_currenys: new_group_currenys.remove(t.tokenName)
+                        if t.tokenName in new_group_currenys: new_group_currenys.remove(t.tokenName)
 
-                        grouped_tr[t.tokenName]['groups'][group_index]['transfers'].append(t)
+                    # Add transfer to group
+                    grouped_tr[t.tokenName]['groups'][group_index]['transfers'].append(t)
+                    is_grouped = True
+                    break
 
-                    else:
-                        if t.tokenName in grouped_tr and t.tokenName not in new_group_currenys:
-                            new_group_currenys.append(t.tokenName)
-                            
-                        ungrouped_tr.append(t)
+            if not is_grouped:
+                if t.tokenName in grouped_tr and t.tokenName not in new_group_currenys:
+                    new_group_currenys.append(t.tokenName)
 
+                # Add transfer to the not grouped
+                ungrouped_tr.append(t)
+        
         groups = []
         for _, value in grouped_tr.items():
-            for g in value['groups']:
-                groups.append(g['transfers'])
+            for g_filter in value['groups']:
+                groups.append(g_filter['transfers'])
 
         return groups, ungrouped_tr
 
@@ -130,7 +165,7 @@ class CoinTrackingExporter(object):
             transfers {[tronparser.TronTransfer]} -- List of TronTransfer
         """
 
-        if not self.groups:
+        if not self.group_filters:
             return transfers
 
         groups, trs = self._group_transfers(transfers)
@@ -168,7 +203,7 @@ class CoinTrackingExporter(object):
         ptr = tronparser.TronTransfer.parse_transfers(transfers)
         print("Fetching success.")
 
-        if self.groups:
+        if self.group_filters:
             print("Mergin grouped transfers ...")
             ptr = self._merge_transfers(ptr)
             print("Mergin success.")
