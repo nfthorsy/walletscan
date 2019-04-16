@@ -1,36 +1,39 @@
-from enum import Enum 
+from enum import Enum
 import tronparser
 import tronscanner
 
+
 class CTTransferType(Enum):
-        Einzahlung = 'Einzahlung'
-        Einnahmen = 'Einnahmen'
-        Mining = 'Mining'
-        Geschenk = 'Geschenk'
-        Auszahlung = 'Auszahlung'
-        Ausgabe = 'Ausgabe'
-        Spende = 'Spende'
-        Schenkung = 'Schenkung'
-        Gestohlen = 'Gestohlen'
-        Verlust = 'Verlust'
+    Einzahlung = 'Einzahlung'
+    Einnahmen = 'Einnahmen'
+    Mining = 'Mining'
+    Geschenk = 'Geschenk'
+    Auszahlung = 'Auszahlung'
+    Ausgabe = 'Ausgabe'
+    Spende = 'Spende'
+    Schenkung = 'Schenkung'
+    Gestohlen = 'Gestohlen'
+    Verlust = 'Verlust'
 
 
 class CoinTrackingExporter(object):
 
-    def __init__(self, wallet_address, wallet_name = None):
+    def __init__(self, wallet_address, wallet_name=None):
         self.wallet_address = wallet_address
         self.wallet_name = wallet_name
         self.assignments = []
         self.group_filters = []
+        self.currency_filters = []
+        self.currency_aliases = {}
 
-    def add_assign(self, transfer_type : CTTransferType, from_address = None, to_address = None):
+    def add_assign(self, transfer_type: CTTransferType, from_address=None, to_address=None):
         """
         Adds transfer assignments. Transfers are assigned to specific transfer types based on the assignment. 
         Without assignment, transfers will be declared as deposits or withdrawals.
-        
+
         Arguments:
             transfer_type {CTTransferType} -- Type which will be assigned to the transfers.
-        
+
         Keyword Arguments:
             from_address {str} -- Affected transfers with this sender address. (default: {None})
             to_address {str} -- Affected transfers with this destination address. (default: {None})
@@ -40,12 +43,35 @@ class CoinTrackingExporter(object):
             print('Either sender address or destination address must be set.')
             return
 
-        self.assignments.append({'transfer_type' : transfer_type, 'from_address' : from_address, 'to_address' : to_address})
+        self.assignments.append({'transfer_type': transfer_type,
+                                 'from_address': from_address, 'to_address': to_address})
 
-    def add_group_filter(self, currency : str, from_address = None, to_address = None):
+    def add_currency_filter(self, currency: str):
+        """
+        Adds currency filters. Only transfers with added currencies will be considered. 
+        If no filter is added, all transfers will be considered.
+
+        Arguments:
+            currency {str} -- Name of the currency
+        """
+
+        self.currency_filters.append(currency)
+
+    def add_currency_alias(self, currency: str, alias: str):
+        """
+        Adds aliases for currency names. In the export, the names will be replaced by the aliases.
+        
+        Arguments:
+            currency {str} -- Name of the currency
+            alias {str} -- Alias of the currency
+        """
+
+        self.currency_aliases[currency] = alias
+
+    def add_group_filter(self, currency: str, from_address=None, to_address=None):
         """
         Adds transfers from specific senders or receivers to a group. Grouped transfers are merged into one transfer when exported.
-        
+
         Keyword Arguments:
             currency {str} -- Currencies which will be grouped together.
             from_address {str} -- Affected transfers with this sender address. (default: {None})
@@ -56,32 +82,33 @@ class CoinTrackingExporter(object):
             print('Either sender address or destination address must be set.')
             return
 
-        self.group_filters.append({'currency' : currency, 'from_address' : from_address, 'to_address' : to_address})
+        self.group_filters.append(
+            {'currency': currency, 'from_address': from_address, 'to_address': to_address})
 
-    def _group_transfers(self, transfers : [tronparser.TronTransfer]):
+    def _group_transfers(self, transfers: [tronparser.TronTransfer]):
         if not self.group_filters:
             return {}, transfers
 
-        sorted_tr = sorted(transfers, key = lambda x: x.timestamp)
+        sorted_tr = sorted(transfers, key=lambda x: x.timestamp)
 
         grouped_tr = {}
         ungrouped_tr = []
         new_group_currenys = []
         for t in sorted_tr:
             for g_filter in self.group_filters:
-                is_grouped = False    
+                is_grouped = False
 
                 # deposit
                 if g_filter['from_address'] is not None and g_filter['from_address'] == t.transferFromAddress:
                     # Add token as a new category, if the category doesn't exist yet
                     if t.tokenName not in grouped_tr:
-                        grouped_tr[t.tokenName] = {'count' : 0, 'groups' : []}
+                        grouped_tr[t.tokenName] = {'count': 0, 'groups': []}
 
                     # Add new Group, if the token has nos group yet
                     if grouped_tr[t.tokenName]['count'] == 0:
-                        grouped_tr[t.tokenName]['groups'].append({'is_outgoing' : False, 
-                                                                  'address': t.transferFromAddress, 
-                                                                  'transfers' : []})
+                        grouped_tr[t.tokenName]['groups'].append({'is_outgoing': False,
+                                                                  'address': t.transferFromAddress,
+                                                                  'transfers': []})
                         grouped_tr[t.tokenName]['count'] = 1
 
                     # Current group index
@@ -91,18 +118,20 @@ class CoinTrackingExporter(object):
                     if grouped_tr[t.tokenName]['groups'][group_index]['is_outgoing'] or \
                        grouped_tr[t.tokenName]['groups'][group_index]['address'] != t.transferFromAddress or \
                        t.tokenName in new_group_currenys:
-                        
+
                         # Add new group
-                        grouped_tr[t.tokenName]['groups'].append({'is_outgoing' : False, 
+                        grouped_tr[t.tokenName]['groups'].append({'is_outgoing': False,
                                                                   'address': t.transferFromAddress,
-                                                                  'transfers' : []})
-                        
-                        grouped_tr[t.tokenName]['count'] += 1 
+                                                                  'transfers': []})
+
+                        grouped_tr[t.tokenName]['count'] += 1
                         group_index = grouped_tr[t.tokenName]['count'] - 1
-                        if t.tokenName in new_group_currenys: new_group_currenys.remove(t.tokenName)
-                    
+                        if t.tokenName in new_group_currenys:
+                            new_group_currenys.remove(t.tokenName)
+
                     # Add transfer to group
-                    grouped_tr[t.tokenName]['groups'][group_index]['transfers'].append(t)
+                    grouped_tr[t.tokenName]['groups'][group_index]['transfers'].append(
+                        t)
                     is_grouped = True
                     break
 
@@ -110,13 +139,13 @@ class CoinTrackingExporter(object):
                 elif g_filter['to_address'] is not None and g_filter['to_address'] == t.transferToAddress:
                      # Add token as a new category, if the category doesn't exist yet
                     if t.tokenName not in grouped_tr:
-                        grouped_tr[t.tokenName] = {'count' : 0, 'groups' : []}
+                        grouped_tr[t.tokenName] = {'count': 0, 'groups': []}
 
                     # Add new Group, if the token has nos group yet
                     if grouped_tr[t.tokenName]['count'] == 0:
-                        grouped_tr[t.tokenName]['groups'].append({'is_outgoing' : True, 
+                        grouped_tr[t.tokenName]['groups'].append({'is_outgoing': True,
                                                                   'address': t.transferToAddress,
-                                                                  'transfers' : []})
+                                                                  'transfers': []})
                         grouped_tr[t.tokenName]['count'] = 1
 
                     # Current group index
@@ -128,16 +157,18 @@ class CoinTrackingExporter(object):
                        t.tokenName in new_group_currenys:
 
                         # Add new group
-                        grouped_tr[t.tokenName]['groups'].append({'is_outgoing' : True, 
+                        grouped_tr[t.tokenName]['groups'].append({'is_outgoing': True,
                                                                   'address': t.transferToAddress,
-                                                                  'transfers' : []})
+                                                                  'transfers': []})
 
-                        grouped_tr[t.tokenName]['count'] += 1 
+                        grouped_tr[t.tokenName]['count'] += 1
                         group_index = grouped_tr[t.tokenName]['count'] - 1
-                        if t.tokenName in new_group_currenys: new_group_currenys.remove(t.tokenName)
+                        if t.tokenName in new_group_currenys:
+                            new_group_currenys.remove(t.tokenName)
 
                     # Add transfer to group
-                    grouped_tr[t.tokenName]['groups'][group_index]['transfers'].append(t)
+                    grouped_tr[t.tokenName]['groups'][group_index]['transfers'].append(
+                        t)
                     is_grouped = True
                     break
 
@@ -147,7 +178,7 @@ class CoinTrackingExporter(object):
 
                 # Add transfer to the not grouped
                 ungrouped_tr.append(t)
-        
+
         groups = []
         for _, value in grouped_tr.items():
             for g_filter in value['groups']:
@@ -155,12 +186,12 @@ class CoinTrackingExporter(object):
 
         return groups, ungrouped_tr
 
-    def _merge_transfers(self, transfers : [tronparser.TronTransfer]):
+    def _merge_transfers(self, transfers: [tronparser.TronTransfer]):
         """
         Merges grouped transfers into one transfer. Transfers with different currencies will be not merged. 
         Groups can be created with the "add_group()" function.
-        
-        
+
+
         Arguments:
             transfers {[tronparser.TronTransfer]} -- List of TronTransfer
         """
@@ -185,14 +216,14 @@ class CoinTrackingExporter(object):
 
             trs.append(transfer)
 
-        trs.sort(key = lambda x: x.timestamp)
+        trs.sort(key=lambda x: x.timestamp)
 
         return trs
 
     def export_csv(self, filename: str):
         """
         Fetches the transfers from the wallet and exports them to a csv file.
-        
+
         Arguments:
             filename {str} -- Destination file.
         """
@@ -209,11 +240,12 @@ class CoinTrackingExporter(object):
             print("Mergin success.")
 
         print("Writing CSV for CoinTracking.info ...")
-        
+
         with open(filename, 'w') as csvf:
             # "Typ","Kauf","Cur.","Verkauf","Cur.","Gebühr","Cur.","Börse","Gruppe","Kommentar","Datum"
 
-            csvf.write(r'"Typ","Kauf","Cur.","Verkauf","Cur.","Gebühr","Cur.","Börse","Gruppe","Kommentar","Datum"' + '\n')
+            csvf.write(
+                r'"Typ","Kauf","Cur.","Verkauf","Cur.","Gebühr","Cur.","Börse","Gruppe","Kommentar","Datum"' + '\n')
 
             for tr in ptr:
                 line = ''
@@ -237,7 +269,7 @@ class CoinTrackingExporter(object):
                     else:
                         print('Something went wrong.')
                         exit()
-                
+
                 line += '\"' + tr_type.value + '\",'
 
                 amount = 0
@@ -250,7 +282,10 @@ class CoinTrackingExporter(object):
                 else:
                     amount = tr.amount
                     # ToDo: Currency value to str
-                    cur = tr.tokenName
+                    if tr.tokenName in self.currency_aliases:
+                        cur = self.currency_aliases[tr.tokenName]
+                    else:
+                        cur = tr.tokenName
 
                 if tr_type.value == CTTransferType.Einzahlung.value or \
                    tr_type.value == CTTransferType.Einnahmen.value or \
@@ -259,7 +294,7 @@ class CoinTrackingExporter(object):
 
                     # Buy
                     line += '\"' + str(amount) + '\",\"' + cur + '\",'
-                    
+
                     # Sell
                     line += r'"","",'
 
@@ -270,8 +305,7 @@ class CoinTrackingExporter(object):
                     # Sell
                     line += '\"' + str(amount) + '\",\"' + cur + '\",'
 
-
-                # ToDo: Fee 
+                # ToDo: Fee
                 line += r'"","",'
 
                 # Exchange
@@ -285,14 +319,8 @@ class CoinTrackingExporter(object):
 
                 # Date
                 # ToDo: Local
-                line += '\"' + tr.get_date(timezone = 'Europe/Berlin') + '\n'
+                line += '\"' + tr.get_date(timezone='Europe/Berlin') + '\n'
 
                 csvf.write(line)
 
         print('Writing CSV finished.')
-
-
-
-                    
-                    
-                
