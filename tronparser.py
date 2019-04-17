@@ -44,6 +44,8 @@ class TronTransfer(object):
                 print("Warning: Transfer " + self.id + " is not confirmed!")
             self.data = transfer_dict['data']
 
+        self.comment = ''
+
     def get_date(self, timezone = 'Europe/Berlin', date_format = '%Y-%m-%d %H:%M:%S'):
         ts = self.timestamp / 1000
         tz = pytz.timezone(timezone)

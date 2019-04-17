@@ -19,23 +19,32 @@ class TronScan(object):
                           'tstamp_end': 'end_timestamp',
                           'limit': 'limit=',
                           'start_index': 'start='}
+
+    TOKEN_PATH = "token"
+    TOKEN_PARAMS = { 'id' : 'id=' }
+    
     PAGE_LIMIT = 50
 
     def __init__(self, wallet_address):
         self.wallet_address = wallet_address
 
-    def __request_api(self, path, req_param):
+    @staticmethod
+    def __request_api(path, req_param):
         try:
             response = requests.get(
-                self.API_URL_BASE + path, params=req_param, timeout=3)
+                TronScan.API_URL_BASE + path, params=req_param, timeout=3)
         except requests.exceptions.Timeout:
-            print("Request " + self.API_URL_BASE + " TIMEOUT!")
+            print("Request " + TronScan.API_URL_BASE + " TIMEOUT!")
             return None
 
         if response.status_code == 200:
             js = json.loads(response.content.decode('utf-8'))
             return js
         return None
+
+    @staticmethod
+    def get_token_info(token_id: str):
+        return TronScan.__request_api(TronScan.TOKEN_PATH, TronScan.TOKEN_PARAMS['id'] + token_id)
 
     def get_transfers(self, tokens: [str] = None, ts_start: int = None, ts_end: int = None, verbose = True):
         if verbose:
@@ -67,7 +76,7 @@ class TronScan(object):
         if ts_end is not None:
             param += '&' + self.TRANSFER_PARAMS['tstamp_end'] + str(ts_end)
 
-            param += '&' + self.TRANSFER_PARAMS['start_index']
+        param += '&' + self.TRANSFER_PARAMS['start_index']
 
         data = {'total': total, 'data': []}
 

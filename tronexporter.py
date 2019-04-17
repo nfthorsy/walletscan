@@ -3,12 +3,12 @@ import tronparser
 import tronscanner
 import codecs
 import time
-import datetime
+from datetime import datetime
 
 
 class CTTransferType(Enum):
     Einzahlung = 'Einzahlung'
-    Einnahmen = 'Einnahmen'
+    Einnahme = 'Einnahme'
     Mining = 'Mining'
     Geschenk = 'Geschenk'
     Auszahlung = 'Auszahlung'
@@ -217,6 +217,8 @@ class CoinTrackingExporter(object):
                 transfer.amount += t.amount
                 transfer.confirmed &= g[0].confirmed
 
+            # ToDo localisation
+            transfer.comment = 'Grouped ' + g[0].get_date(timezone='Europe/Berlin') + ' - ' + transfer.get_date(timezone='Europe/Berlin')
             trs.append(transfer)
 
         trs.sort(key=lambda x: x.timestamp)
@@ -235,20 +237,17 @@ class CoinTrackingExporter(object):
 
         ts_start = None
         if start_date is not None:
-            ts_start = time.mktime(datetime.datetime.strptime(
-                start_date, '%Y-%m-%d %H:%M:%S').timetuple())
+            ts_start = time.mktime(datetime.strptime(start_date, '%Y-%m-%d %H:%M:%S').timetuple())
             ts_start = int(ts_start * 1000)
 
         ts_end = None
         if end_date is not None:
-            ts_end = time.mktime(datetime.datetime.strptime(
-                end_date, '%Y-%m-%d %H:%M:%S').timetuple())
+            ts_end = time.mktime(datetime.strptime(end_date, '%Y-%m-%d %H:%M:%S').timetuple())
             ts_end = int(ts_end * 1000)
 
         print("Fetching transfers from tronscan.org API ...")
         scanner = tronscanner.TronScan(self.wallet_address)
-        transfers = scanner.get_transfers(
-            tokens=self.currency_filters, ts_start=ts_start, ts_end=ts_end)
+        transfers = scanner.get_transfers(tokens=self.currency_filters, ts_start=ts_start, ts_end=ts_end)
         ptr = tronparser.TronTransfer.parse_transfers(transfers)
         print("Fetching success.")
 
@@ -262,8 +261,7 @@ class CoinTrackingExporter(object):
         with codecs.open(filename, 'w', 'utf-8') as csvf:
             # "Typ","Kauf","Cur.","Verkauf","Cur.","Gebühr","Cur.","Börse","Gruppe","Kommentar","Datum"
 
-            csvf.write(
-                r'"Typ","Kauf","Cur.","Verkauf","Cur.","Gebühr","Cur.","Börse","Gruppe","Kommentar","Datum"' + '\n')
+            csvf.write(r'"Typ","Kauf","Cur.","Verkauf","Cur.","Gebühr","Cur.","Börse","Gruppe","Kommentar","Datum"' + '\n')
 
             for tr in ptr:
                 line = ''
@@ -293,12 +291,16 @@ class CoinTrackingExporter(object):
                 amount = 0
                 cur = ''
 
+                
                 if tr.tokenName == '_':
                     # 3754437233 = 3,754.437233 TRX
                     amount = tr.amount / 1000000
                     cur = 'TRX'
                 else:
-                    amount = tr.amount
+                    token_info = tronscanner.TronScan.get_token_info(tr.tokenName)
+                    precision = token_info['data'][0]['precision']
+
+                    amount = tr.amount / (10**precision)
 
                     if tr.tokenName in self.currency_aliases:
                         cur = self.currency_aliases[tr.tokenName]
@@ -306,7 +308,7 @@ class CoinTrackingExporter(object):
                         cur = tr.tokenName
 
                 if tr_type.value == CTTransferType.Einzahlung.value or \
-                   tr_type.value == CTTransferType.Einnahmen.value or \
+                   tr_type.value == CTTransferType.Einnahme.value or \
                    tr_type.value == CTTransferType.Mining.value or \
                    tr_type.value == CTTransferType.Geschenk.value:
 
@@ -327,13 +329,13 @@ class CoinTrackingExporter(object):
                 line += r'"","",'
 
                 # Exchange
-                line += '\"' + '' if self.wallet_name is None else self.wallet_name + '\",'
+                line += '\"' + ('' if self.wallet_name is None else self.wallet_name) + '\",'
 
                 # Group
                 line += r'"",'
 
                 # Comment
-                line += r'"",'
+                line += '\"' + tr.comment + '\",'
 
                 # Date
                 # ToDo: Local
