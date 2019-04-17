@@ -1,6 +1,7 @@
 from enum import Enum
 import tronparser
 import tronscanner
+import codecs
 
 
 class CTTransferType(Enum):
@@ -60,7 +61,7 @@ class CoinTrackingExporter(object):
     def add_currency_alias(self, currency: str, alias: str):
         """
         Adds aliases for currency names. In the export, the names will be replaced by the aliases.
-        
+
         Arguments:
             currency {str} -- Name of the currency
             alias {str} -- Alias of the currency
@@ -230,7 +231,7 @@ class CoinTrackingExporter(object):
 
         print("Fetching transfers from tronscan.org API ...")
         scanner = tronscanner.TronScan(self.wallet_address)
-        transfers = scanner.get_all_transfers()
+        transfers = scanner.get_transfers(tokens=self.currency_filters)
         ptr = tronparser.TronTransfer.parse_transfers(transfers)
         print("Fetching success.")
 
@@ -241,7 +242,7 @@ class CoinTrackingExporter(object):
 
         print("Writing CSV for CoinTracking.info ...")
 
-        with open(filename, 'w') as csvf:
+        with codecs.open(filename, 'w', 'utf-8') as csvf:
             # "Typ","Kauf","Cur.","Verkauf","Cur.","Gebühr","Cur.","Börse","Gruppe","Kommentar","Datum"
 
             csvf.write(
@@ -281,7 +282,7 @@ class CoinTrackingExporter(object):
                     cur = 'TRX'
                 else:
                     amount = tr.amount
-                    # ToDo: Currency value to str
+
                     if tr.tokenName in self.currency_aliases:
                         cur = self.currency_aliases[tr.tokenName]
                     else:
