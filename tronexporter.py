@@ -261,10 +261,10 @@ class CoinTrackingExporter(object):
         with codecs.open(filename, 'w', 'utf-8') as csvf:
             # "Typ","Kauf","Cur.","Verkauf","Cur.","Gebühr","Cur.","Börse","Gruppe","Kommentar","Datum"
 
-            csvf.write(r'"Typ","Kauf","Cur.","Verkauf","Cur.","Gebühr","Cur.","Börse","Gruppe","Kommentar","Datum"' + '\n')
+            csvf.write(r'"Typ","Kauf","Cur.","Verkauf","Cur.","Gebühr","Cur.","Börse","Gruppe","Kommentar","Datum"')
 
             for tr in ptr:
-                line = ''
+                line = '\n'
                 has_assign = False
                 tr_type = CTTransferType('Einzahlung')
 
@@ -339,7 +339,7 @@ class CoinTrackingExporter(object):
 
                 # Date
                 # ToDo: Local
-                line += '\"' + tr.get_date(timezone='Europe/Berlin') + '\n'
+                line += '\"' + tr.get_date(timezone='Europe/Berlin')
 
                 csvf.write(line)
 
