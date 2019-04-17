@@ -37,9 +37,18 @@ class TronScan(object):
             return js
         return None
 
-    def get_all_transfers(self, verbose=True):
+    def get_transfers(self, tokens: [str] = None, ts_start: int = None, ts_end: int = None, verbose = True):
+        if verbose:
+            print("Receiving transfers ...")
+
         param = self.TRANSFER_PARAMS['address'] + \
-            self.wallet_address + '&' + self.TRANSFER_PARAMS['limit'] + '1'
+        self.wallet_address + '&' + self.TRANSFER_PARAMS['limit'] + '1'
+
+        if ts_start is not None:
+            param += '&' + self.TRANSFER_PARAMS['tstamp_start'] + str(ts_start)
+
+        if ts_end is not None:
+            param += '&' + self.TRANSFER_PARAMS['tstamp_end'] + str(ts_end)
 
         js = self.__request_api(self.TRANSFER_PATH, param)
         total = js['total']
@@ -50,8 +59,15 @@ class TronScan(object):
         max_index = int(total / self.PAGE_LIMIT)
 
         param = self.TRANSFER_PARAMS['address'] + self.wallet_address + '&' + \
-            self.TRANSFER_PARAMS['limit'] + str(self.PAGE_LIMIT) + '&' + \
-            self.TRANSFER_PARAMS['start_index']
+            self.TRANSFER_PARAMS['limit'] + str(self.PAGE_LIMIT)
+
+        if ts_start is not None:
+            param += '&' + self.TRANSFER_PARAMS['tstamp_start'] + str(ts_start)
+
+        if ts_end is not None:
+            param += '&' + self.TRANSFER_PARAMS['tstamp_end'] + str(ts_end)
+
+            param += '&' + self.TRANSFER_PARAMS['start_index']
 
         data = {'total': total, 'data': []}
 
@@ -66,22 +82,8 @@ class TronScan(object):
             if verbose:
                 sys.stdout.write("\r%d%%" % progress)
 
-        data_len = len(data['data'])
-        data['total'] = data_len
-
         if verbose:
-            print('\n' + str(data_len) + ' transfers received.')
-
-        return data
-
-    def get_transfers(self, tokens: [str] = None, ts_start: int = None, ts_end: int = None, verbose = True):
-        if verbose:
-            print("Receiving transfers ...")
-
-        data = self.get_all_transfers(verbose=verbose)
-
-        if verbose:
-            print("Transfers received...")
+            print('\n' + str(len(data['data'])) + ' transfers received.')
 
         if tokens:
             new_data = []
@@ -89,22 +91,37 @@ class TronScan(object):
                 if d['tokenName'] in tokens:
                     new_data.append(d)
 
-            data['total'] = len(new_data)
             data['data'] = new_data
+
+        data['total'] = len(data['data'])
 
         return data
 
-    def get_all_transactions(self):
+    def get_all_transactions(self, ts_start: int = None, ts_end: int = None):
         param = self.TRANSACTION_PARAMS['address'] + \
             self.wallet_address + '&' + self.TRANSACTION_PARAMS['limit'] + '1'
+
+        if ts_start is not None:
+            param += '&' + self.TRANSACTION_PARAMS['tstamp_start'] + str(ts_start)
+
+        if ts_end is not None:
+            param += '&' + self.TRANSACTION_PARAMS['tstamp_end'] + str(ts_end)
+
         js = self.__request_api(self.TRANSACTION_PATH, param)
         total = js['total']
         print("Total count of transcations to receive: " + str(total))
 
         max_index = int(total / self.PAGE_LIMIT)
         param = self.TRANSACTION_PARAMS['address'] + self.wallet_address + '&' + \
-            self.TRANSACTION_PARAMS['limit'] + str(self.PAGE_LIMIT) + '&' + \
-            self.TRANSACTION_PARAMS['start_index']
+            self.TRANSACTION_PARAMS['limit'] + str(self.PAGE_LIMIT)
+
+        if ts_start is not None:
+            param += '&' + self.TRANSACTION_PARAMS['tstamp_start'] + str(ts_start)
+
+        if ts_end is not None:
+            param += '&' + self.TRANSACTION_PARAMS['tstamp_end'] + str(ts_end)
+        
+        param += '&' + self.TRANSACTION_PARAMS['start_index']
 
         data = {'total': total, 'data': []}
         sys.stdout.write("\r0%")

@@ -2,6 +2,8 @@ from enum import Enum
 import tronparser
 import tronscanner
 import codecs
+import time
+import datetime
 
 
 class CTTransferType(Enum):
@@ -221,24 +223,39 @@ class CoinTrackingExporter(object):
 
         return trs
 
-    def export_csv(self, filename: str):
+    def export_csv(self, filename: str, start_date: str = None, end_date: str = None):
         """
         Fetches the transfers from the wallet and exports them to a csv file.
 
         Arguments:
             filename {str} -- Destination file.
+            start_date {str} -- Exports all transfers from including this date. Format: "yyyy-mm-dd hh:mm:ss"
+            end_date {str} -- Exports all transfers up to and including this date. Format: "yyyy-mm-dd hh:mm:ss"
         """
+
+        ts_start = None
+        if start_date is not None:
+            ts_start = time.mktime(datetime.datetime.strptime(
+                start_date, '%Y-%m-%d %H:%M:%S').timetuple())
+            ts_start = int(ts_start * 1000)
+
+        ts_end = None
+        if end_date is not None:
+            ts_end = time.mktime(datetime.datetime.strptime(
+                end_date, '%Y-%m-%d %H:%M:%S').timetuple())
+            ts_end = int(ts_end * 1000)
 
         print("Fetching transfers from tronscan.org API ...")
         scanner = tronscanner.TronScan(self.wallet_address)
-        transfers = scanner.get_transfers(tokens=self.currency_filters)
+        transfers = scanner.get_transfers(
+            tokens=self.currency_filters, ts_start=ts_start, ts_end=ts_end)
         ptr = tronparser.TronTransfer.parse_transfers(transfers)
         print("Fetching success.")
 
         if self.group_filters:
-            print("Mergin grouped transfers ...")
+            print("Merging grouped transfers ...")
             ptr = self._merge_transfers(ptr)
-            print("Mergin success.")
+            print("Merging success.")
 
         print("Writing CSV for CoinTracking.info ...")
 
