@@ -48,19 +48,24 @@ class TronTransfer(object):
 
         self.comment = ''
 
-    def get_date(self, timezone = 'Europe/Berlin', date_format = '%Y-%m-%d %H:%M:%S'):
+    def get_date(self, timezone = None, date_format = '%Y-%m-%d %H:%M:%S'):
         """Converts the timestamp of transfer in a date.
         
         Keyword Arguments:
-            timezone {str} -- Timezone. (default: {'Europe/Berlin'})
+            timezone {str} -- Timezone. (default: {None})
             date_format {str} -- Format of the date. (default: {'%Y-%m-%d %H:%M:%S'})
         
         Returns:
             str -- Date.
         """
+
         ts = self.timestamp / 1000
-        tz = pytz.timezone(timezone)
-        dt = datetime.fromtimestamp(ts, tz)
+        if timezone is None:
+            dt = datetime.fromtimestamp(ts)
+        else:
+            tz = pytz.timezone(timezone)
+            dt = datetime.fromtimestamp(ts, tz)
+        
         return dt.strftime(date_format)
 
     @staticmethod
@@ -102,7 +107,7 @@ class TronTransaction(object):
         self.data = transaction_dict['data']
         self.fee = transaction_dict['fee']
 
-    def get_date(self, timezone = 'Europe/Berlin', date_format = '%Y-%m-%d %H:%M:%S'):
+    def get_date(self, timezone = None, date_format = '%Y-%m-%d %H:%M:%S'):
         """Converts the timestamp of transaction in a date.
         
         Keyword Arguments:
@@ -114,8 +119,12 @@ class TronTransaction(object):
         """
 
         ts = self.timestamp / 1000
-        tz = pytz.timezone(timezone)
-        dt = datetime.fromtimestamp(ts, tz)
+        if timezone is None:
+            dt = datetime.fromtimestamp(ts)
+        else:
+            tz = pytz.timezone(timezone)
+            dt = datetime.fromtimestamp(ts, tz)
+        
         return dt.strftime(date_format)
 
     @staticmethod

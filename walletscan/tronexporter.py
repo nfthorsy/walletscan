@@ -355,8 +355,7 @@ class CoinTrackingExporter(TronTransferExporter):
                 line += '\"' + tr.comment + '\",'
 
                 # Date
-                # ToDo: Local
-                line += '\"' + tr.get_date(timezone='Europe/Berlin')
+                line += '\"' + tr.get_date()
 
                 csvf.write(line)
 
