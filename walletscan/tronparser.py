@@ -22,23 +22,23 @@ class TronTransfer(object):
         if transfer_dict is None:
             self.id = None
             self.block = None
-            self.transactionHash = None
+            self.transaction_hash = None
             self.timestamp = None
-            self.transferFromAddress = None
-            self.transferToAddress = None
+            self.from_address = None
+            self.to_address = None
             self.amount = None
-            self.tokenName = None
+            self.token_name = None
             self.confirmed = None
             self.data = None
         else:
             self.id = transfer_dict['id']
             self.block = int(transfer_dict['block'])
-            self.transactionHash = transfer_dict['transactionHash']
+            self.transaction_hash = transfer_dict['transactionHash']
             self.timestamp = int(transfer_dict['timestamp'])
-            self.transferFromAddress = transfer_dict['transferFromAddress']
-            self.transferToAddress = transfer_dict['transferToAddress']
+            self.from_address = transfer_dict['transferFromAddress']
+            self.to_address = transfer_dict['transferToAddress']
             self.amount = int(transfer_dict['amount'])
-            self.tokenName = str(transfer_dict['tokenName'])
+            self.token_name = str(transfer_dict['tokenName'])
             self.confirmed = transfer_dict['confirmed']
             if not self.confirmed:
                 print("Warning: Transfer " + self.id + " is not confirmed!")
@@ -67,14 +67,14 @@ class TronTransaction(object):
         self.block = int(transaction_dict['block'])
         self.hash = transaction_dict['hash']
         self.timestamp = int(transaction_dict['timestamp'])
-        self.ownerAddress = transaction_dict['ownerAddress']
-        self.contractType = ContractType(transaction_dict['contractType'])
-        self.toAddress = transaction_dict['toAddress']
+        self.owner_address = transaction_dict['ownerAddress']
+        self.contract_type = ContractType(transaction_dict['contractType'])
+        self.to_address = transaction_dict['toAddress']
         self.confirmed = transaction_dict['confirmed']
         if not self.confirmed:
             print('Not confirmed: ' + self.hash)
-        self.contractData = TronContract(self.contractType, transaction_dict['contractData'])
-        self.smartCalls = transaction_dict['SmartCalls']
+        self.contract_data = TronContract(self.contract_type, transaction_dict['contractData'])
+        self.smart_calls = transaction_dict['SmartCalls']
         self.events = transaction_dict['Events']
         self.id = transaction_dict['id']
         self.data = transaction_dict['data']

@@ -112,5 +112,5 @@ Pipfile.lock
 # mainfile
 main.py
 
-# testfiles
-test.csv
+# csv
+*.csv

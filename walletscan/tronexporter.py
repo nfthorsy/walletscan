@@ -5,30 +5,29 @@ import time
 from datetime import datetime
 
 
-class CTTransferType(Enum):
-    Einzahlung = 'Einzahlung'
-    Einnahme = 'Einnahme'
+class TransferType(Enum):
+    Deposit = 'Einzahlung'
+    Revenues = 'Einnahme'
     Mining = 'Mining'
-    Geschenk = 'Geschenk'
-    Auszahlung = 'Auszahlung'
-    Ausgabe = 'Ausgabe'
-    Spende = 'Spende'
-    Schenkung = 'Schenkung'
-    Gestohlen = 'Gestohlen'
-    Verlust = 'Verlust'
+    GiftIn = 'Geschenk'
+    Withdrawal = 'Auszahlung'
+    Expense = 'Ausgabe'
+    Donation = 'Spende'
+    GiftOut = 'Schenkung'
+    Stolen = 'Gestohlen'
+    Loss = 'Verlust'
 
 
-class CoinTrackingExporter(object):
+class TronTransferExporter(object):
 
-    def __init__(self, wallet_address, wallet_name=None):
+    def __init__(self, wallet_address):
         self.wallet_address = wallet_address
-        self.wallet_name = wallet_name
         self.assignments = []
         self.group_filters = []
         self.currency_filters = []
         self.currency_aliases = {}
 
-    def add_assign(self, transfer_type: CTTransferType, from_address=None, to_address=None):
+    def add_assign(self, transfer_type: TransferType, from_address=None, to_address=None):
         """
         Adds transfer assignments. Transfers are assigned to specific transfer types based on the assignment. 
         Without assignment, transfers will be declared as deposits or withdrawals.
@@ -101,82 +100,82 @@ class CoinTrackingExporter(object):
                 is_grouped = False
 
                 # deposit
-                if g_filter['from_address'] is not None and g_filter['from_address'] == t.transferFromAddress:
+                if g_filter['from_address'] is not None and g_filter['from_address'] == t.from_address:
                     # Add token as a new category, if the category doesn't exist yet
-                    if t.tokenName not in grouped_tr:
-                        grouped_tr[t.tokenName] = {'count': 0, 'groups': []}
+                    if t.token_name not in grouped_tr:
+                        grouped_tr[t.token_name] = {'count': 0, 'groups': []}
 
                     # Add new Group, if the token has nos group yet
-                    if grouped_tr[t.tokenName]['count'] == 0:
-                        grouped_tr[t.tokenName]['groups'].append({'is_outgoing': False,
-                                                                  'address': t.transferFromAddress,
-                                                                  'transfers': []})
-                        grouped_tr[t.tokenName]['count'] = 1
+                    if grouped_tr[t.token_name]['count'] == 0:
+                        grouped_tr[t.token_name]['groups'].append({'is_outgoing': False,
+                                                                   'address': t.from_address,
+                                                                   'transfers': []})
+                        grouped_tr[t.token_name]['count'] = 1
 
                     # Current group index
-                    group_index = grouped_tr[t.tokenName]['count'] - 1
+                    group_index = grouped_tr[t.token_name]['count'] - 1
 
                     # If the current transfer does not fit into the group, new group will be created
-                    if grouped_tr[t.tokenName]['groups'][group_index]['is_outgoing'] or \
-                       grouped_tr[t.tokenName]['groups'][group_index]['address'] != t.transferFromAddress or \
-                       t.tokenName in new_group_currenys:
+                    if grouped_tr[t.token_name]['groups'][group_index]['is_outgoing'] or \
+                       grouped_tr[t.token_name]['groups'][group_index]['address'] != t.from_address or \
+                       t.token_name in new_group_currenys:
 
                         # Add new group
-                        grouped_tr[t.tokenName]['groups'].append({'is_outgoing': False,
-                                                                  'address': t.transferFromAddress,
-                                                                  'transfers': []})
+                        grouped_tr[t.token_name]['groups'].append({'is_outgoing': False,
+                                                                   'address': t.from_address,
+                                                                   'transfers': []})
 
-                        grouped_tr[t.tokenName]['count'] += 1
-                        group_index = grouped_tr[t.tokenName]['count'] - 1
-                        if t.tokenName in new_group_currenys:
-                            new_group_currenys.remove(t.tokenName)
+                        grouped_tr[t.token_name]['count'] += 1
+                        group_index = grouped_tr[t.token_name]['count'] - 1
+                        if t.token_name in new_group_currenys:
+                            new_group_currenys.remove(t.token_name)
 
                     # Add transfer to group
-                    grouped_tr[t.tokenName]['groups'][group_index]['transfers'].append(
+                    grouped_tr[t.token_name]['groups'][group_index]['transfers'].append(
                         t)
                     is_grouped = True
                     break
 
                 # withdrawal
-                elif g_filter['to_address'] is not None and g_filter['to_address'] == t.transferToAddress:
+                elif g_filter['to_address'] is not None and g_filter['to_address'] == t.to_address:
                      # Add token as a new category, if the category doesn't exist yet
-                    if t.tokenName not in grouped_tr:
-                        grouped_tr[t.tokenName] = {'count': 0, 'groups': []}
+                    if t.token_name not in grouped_tr:
+                        grouped_tr[t.token_name] = {'count': 0, 'groups': []}
 
                     # Add new Group, if the token has nos group yet
-                    if grouped_tr[t.tokenName]['count'] == 0:
-                        grouped_tr[t.tokenName]['groups'].append({'is_outgoing': True,
-                                                                  'address': t.transferToAddress,
-                                                                  'transfers': []})
-                        grouped_tr[t.tokenName]['count'] = 1
+                    if grouped_tr[t.token_name]['count'] == 0:
+                        grouped_tr[t.token_name]['groups'].append({'is_outgoing': True,
+                                                                   'address': t.to_address,
+                                                                   'transfers': []})
+                        grouped_tr[t.token_name]['count'] = 1
 
                     # Current group index
-                    group_index = grouped_tr[t.tokenName]['count'] - 1
+                    group_index = grouped_tr[t.token_name]['count'] - 1
 
                     # If the current transfer does not fit into the group, new group will be created
-                    if grouped_tr[t.tokenName]['groups'][group_index]['is_outgoing'] or \
-                       grouped_tr[t.tokenName]['groups'][group_index]['address'] != t.transferToAddress or \
-                       t.tokenName in new_group_currenys:
+                    if grouped_tr[t.token_name]['groups'][group_index]['is_outgoing'] or \
+                       grouped_tr[t.token_name]['groups'][group_index]['address'] != t.to_address or \
+                       t.token_name in new_group_currenys:
 
                         # Add new group
-                        grouped_tr[t.tokenName]['groups'].append({'is_outgoing': True,
-                                                                  'address': t.transferToAddress,
-                                                                  'transfers': []})
+                        grouped_tr[t.token_name]['groups'].append({'is_outgoing': True,
+                                                                   'address': t.to_address,
+                                                                   'transfers': []})
 
-                        grouped_tr[t.tokenName]['count'] += 1
-                        group_index = grouped_tr[t.tokenName]['count'] - 1
-                        if t.tokenName in new_group_currenys:
-                            new_group_currenys.remove(t.tokenName)
+                        grouped_tr[t.token_name]['count'] += 1
+                        group_index = grouped_tr[t.token_name]['count'] - 1
+                        if t.token_name in new_group_currenys:
+                            new_group_currenys.remove(t.token_name)
 
                     # Add transfer to group
-                    grouped_tr[t.tokenName]['groups'][group_index]['transfers'].append(
+                    grouped_tr[t.token_name]['groups'][group_index]['transfers'].append(
                         t)
                     is_grouped = True
                     break
 
             if not is_grouped:
-                if t.tokenName in grouped_tr and t.tokenName not in new_group_currenys:
-                    new_group_currenys.append(t.tokenName)
+                if t.token_name in grouped_tr and t.token_name not in new_group_currenys:
+                    new_group_currenys.append(t.token_name)
 
                 # Add transfer to the not grouped
                 ungrouped_tr.append(t)
@@ -206,9 +205,9 @@ class CoinTrackingExporter(object):
         for g in groups:
             transfer = walletscan.TronTransfer()
             transfer.amount = 0
-            transfer.transferFromAddress = g[0].transferFromAddress
-            transfer.transferToAddress = g[0].transferToAddress
-            transfer.tokenName = g[0].tokenName
+            transfer.from_address = g[0].from_address
+            transfer.to_address = g[0].to_address
+            transfer.token_name = g[0].token_name
             transfer.confirmed = True
 
             for t in g:
@@ -217,12 +216,23 @@ class CoinTrackingExporter(object):
                 transfer.confirmed &= g[0].confirmed
 
             # ToDo localisation
-            transfer.comment = 'Grouped ' + g[0].get_date(timezone='Europe/Berlin') + ' - ' + transfer.get_date(timezone='Europe/Berlin')
+            transfer.comment = 'Grouped ' + \
+                g[0].get_date(timezone='Europe/Berlin') + ' - ' + transfer.get_date(timezone='Europe/Berlin')
             trs.append(transfer)
 
         trs.sort(key=lambda x: x.timestamp)
 
         return trs
+
+    def export_csv(self, filename: str, start_date: str = None, end_date: str = None):
+        raise NotImplementedError()
+
+
+class CoinTrackingExporter(TronTransferExporter):
+
+    def __init__(self, wallet_address, wallet_name=None):
+        super().__init__(wallet_address)
+        self.wallet_name = wallet_name
 
     def export_csv(self, filename: str, start_date: str = None, end_date: str = None):
         """
@@ -258,28 +268,28 @@ class CoinTrackingExporter(object):
         print("Writing CSV for CoinTracking.info ...")
 
         with codecs.open(filename, 'w', 'utf-8') as csvf:
-            # "Typ","Kauf","Cur.","Verkauf","Cur.","Gebühr","Cur.","Börse","Gruppe","Kommentar","Datum"
 
+            # ToDo: Switchable language
             csvf.write(r'"Typ","Kauf","Cur.","Verkauf","Cur.","Gebühr","Cur.","Börse","Gruppe","Kommentar","Datum"')
 
             for tr in ptr:
                 line = '\n'
                 has_assign = False
-                tr_type = CTTransferType('Einzahlung')
+                tr_type = TransferType.Deposit
 
                 # Type
                 for assign in self.assignments:
-                    if tr.transferFromAddress == assign['from_address'] or tr.transferToAddress == assign['to_address']:
+                    if tr.from_address == assign['from_address'] or tr.to_address == assign['to_address']:
                         tr_type = assign['transfer_type']
                         has_assign = True
                         break
 
                 if not has_assign:
-                    if tr.transferToAddress == self.wallet_address:
-                        tr_type = CTTransferType.Einzahlung
+                    if tr.to_address == self.wallet_address:
+                        tr_type = TransferType.Deposit
 
-                    elif tr.transferFromAddress == self.wallet_address:
-                        tr_type = CTTransferType.Auszahlung
+                    elif tr.from_address == self.wallet_address:
+                        tr_type = TransferType.Withdrawal
 
                     else:
                         print('Something went wrong.')
@@ -290,26 +300,24 @@ class CoinTrackingExporter(object):
                 amount = 0
                 cur = ''
 
-                
-                if tr.tokenName == '_':
-                    # 3754437233 = 3,754.437233 TRX
+                if tr.token_name == '_':
                     amount = tr.amount / 1000000
                     cur = 'TRX'
                 else:
-                    token_info = walletscan.TronScan.get_token_info(tr.tokenName)
+                    token_info = walletscan.TronScan.get_token_info(tr.token_name)
                     precision = token_info['data'][0]['precision']
 
                     amount = tr.amount / (10**precision)
 
-                    if tr.tokenName in self.currency_aliases:
-                        cur = self.currency_aliases[tr.tokenName]
+                    if tr.token_name in self.currency_aliases:
+                        cur = self.currency_aliases[tr.token_name]
                     else:
-                        cur = tr.tokenName
+                        cur = tr.token_name
 
-                if tr_type.value == CTTransferType.Einzahlung.value or \
-                   tr_type.value == CTTransferType.Einnahme.value or \
-                   tr_type.value == CTTransferType.Mining.value or \
-                   tr_type.value == CTTransferType.Geschenk.value:
+                if tr_type.value == TransferType.Deposit.value or \
+                   tr_type.value == TransferType.Revenues.value or \
+                   tr_type.value == TransferType.Mining.value or \
+                   tr_type.value == TransferType.GiftIn.value:
 
                     # Buy
                     line += '\"' + str(amount) + '\",\"' + cur + '\",'
