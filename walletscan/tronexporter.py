@@ -19,6 +19,7 @@ class TransferType(Enum):
 
 
 class TronTransferExporter(object):
+    """Exporter Class for Tron transfers."""
 
     def __init__(self, wallet_address):
         self.wallet_address = wallet_address
@@ -87,6 +88,14 @@ class TronTransferExporter(object):
             {'currency': currency, 'from_address': from_address, 'to_address': to_address})
 
     def _group_transfers(self, transfers: [walletscan.TronTransfer]):
+        """Groups the transfers for merging.
+        
+        Arguments:
+            transfers {[TronTransfer]} -- Transfers which will be grouped.
+        
+        Returns:
+            dict -- Grouped transfers.
+        """
         if not self.group_filters:
             return {}, transfers
 
@@ -229,6 +238,7 @@ class TronTransferExporter(object):
 
 
 class CoinTrackingExporter(TronTransferExporter):
+    """Exporter class of Tron transfers to a readable file for CoinTracking.info."""
 
     def __init__(self, wallet_address, wallet_name=None):
         super().__init__(wallet_address)

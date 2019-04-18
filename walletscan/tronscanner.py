@@ -4,6 +4,8 @@ import sys
 
 
 class TronScan(object):
+    """Class for scanning the Tron network."""
+
     API_URL_BASE = "https://apilist.tronscan.org/api/"
 
     TRANSFER_PATH = "transfer"
@@ -25,11 +27,21 @@ class TronScan(object):
     
     PAGE_LIMIT = 50
 
-    def __init__(self, wallet_address):
+    def __init__(self, wallet_address: str):
         self.wallet_address = wallet_address
 
     @staticmethod
-    def __request_api(path, req_param):
+    def __request_api(path: str, req_param: str):
+        """Sends a request to the tronscan api.
+        
+        Arguments:
+            path {str} -- Api path.
+            req_param {str} -- Request parameters
+        
+        Returns:
+            json -- Response of request. 
+        """
+
         try:
             response = requests.get(
                 TronScan.API_URL_BASE + path, params=req_param, timeout=3)
@@ -44,9 +56,28 @@ class TronScan(object):
 
     @staticmethod
     def get_token_info(token_id: str):
+        """Request information of token from Tron network.
+        
+        Arguments:
+            token_id {str} -- Id of token.
+        
+        Returns:
+            json -- Token informations.
+        """
         return TronScan.__request_api(TronScan.TOKEN_PATH, TronScan.TOKEN_PARAMS['id'] + token_id)
 
     def get_transfers(self, tokens: [str] = None, ts_start: int = None, ts_end: int = None, verbose = True):
+        """Fetches the transfers of wallet.
+        
+        Keyword Arguments:
+            tokens {[str]} -- List of tokens which will be fetched. None for all tokens. (default: {None})
+            ts_start {int} -- Start timestamp of date range. (default: {None})
+            ts_end {int} -- End timestamp of date range.  (default: {None})
+            verbose {bool} -- Prints process status. (default: {True})
+        
+        Returns:
+            json -- Transfers.
+        """
         if verbose:
             print("Receiving transfers ...")
 
@@ -107,6 +138,15 @@ class TronScan(object):
         return data
 
     def get_all_transactions(self, ts_start: int = None, ts_end: int = None):
+        """Fetches all transactions of wallet.
+        
+        Keyword Arguments:
+            ts_start {int} -- Start timestamp of date range. (default: {None})
+            ts_end {int} -- End timestamp of date range.  (default: {None})
+        
+        Returns:
+            json -- Transactions.
+        """
         param = self.TRANSACTION_PARAMS['address'] + \
             self.wallet_address + '&' + self.TRANSACTION_PARAMS['limit'] + '1'
 
