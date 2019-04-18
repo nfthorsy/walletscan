@@ -1,6 +1,5 @@
 from enum import Enum
-import tronparser
-import tronscanner
+import walletscan
 import codecs
 import time
 from datetime import datetime
@@ -88,7 +87,7 @@ class CoinTrackingExporter(object):
         self.group_filters.append(
             {'currency': currency, 'from_address': from_address, 'to_address': to_address})
 
-    def _group_transfers(self, transfers: [tronparser.TronTransfer]):
+    def _group_transfers(self, transfers: [walletscan.TronTransfer]):
         if not self.group_filters:
             return {}, transfers
 
@@ -189,7 +188,7 @@ class CoinTrackingExporter(object):
 
         return groups, ungrouped_tr
 
-    def _merge_transfers(self, transfers: [tronparser.TronTransfer]):
+    def _merge_transfers(self, transfers: [walletscan.TronTransfer]):
         """
         Merges grouped transfers into one transfer. Transfers with different currencies will be not merged. 
         Groups can be created with the "add_group()" function.
@@ -205,7 +204,7 @@ class CoinTrackingExporter(object):
         groups, trs = self._group_transfers(transfers)
 
         for g in groups:
-            transfer = tronparser.TronTransfer()
+            transfer = walletscan.TronTransfer()
             transfer.amount = 0
             transfer.transferFromAddress = g[0].transferFromAddress
             transfer.transferToAddress = g[0].transferToAddress
@@ -246,9 +245,9 @@ class CoinTrackingExporter(object):
             ts_end = int(ts_end * 1000)
 
         print("Fetching transfers from tronscan.org API ...")
-        scanner = tronscanner.TronScan(self.wallet_address)
+        scanner = walletscan.TronScan(self.wallet_address)
         transfers = scanner.get_transfers(tokens=self.currency_filters, ts_start=ts_start, ts_end=ts_end)
-        ptr = tronparser.TronTransfer.parse_transfers(transfers)
+        ptr = walletscan.TronTransfer.parse_transfers(transfers)
         print("Fetching success.")
 
         if self.group_filters:
@@ -297,7 +296,7 @@ class CoinTrackingExporter(object):
                     amount = tr.amount / 1000000
                     cur = 'TRX'
                 else:
-                    token_info = tronscanner.TronScan.get_token_info(tr.tokenName)
+                    token_info = walletscan.TronScan.get_token_info(tr.tokenName)
                     precision = token_info['data'][0]['precision']
 
                     amount = tr.amount / (10**precision)
